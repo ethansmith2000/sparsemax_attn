@@ -21,7 +21,7 @@ Here is the full list of checkpoints on the hub that can be fine-tuned by this s
 https://huggingface.co/models?filter=text-generation
 """
 # You can also adapt this script on your own causal language modeling task. Pointers for this are left as comments.
-
+from __future__ import division
 import argparse
 import json
 import logging
@@ -70,7 +70,7 @@ Pytorch implementation of Sparsemax function from:
 -- André F. T. Martins, Ramón Fernandez Astudillo (http://arxiv.org/abs/1602.02068)
 """
 
-from __future__ import division
+
 
 import torch
 import torch.nn as nn
@@ -135,10 +135,10 @@ class Sparsemax(nn.Module):
         taus = taus.expand_as(input)
 
         # Sparsemax
-        self.output = torch.max(torch.zeros_like(input), input - taus)
+        output = torch.max(torch.zeros_like(input), input - taus)
 
         # Reshape back to original shape
-        output = self.output
+        # output = self.output
         output = output.transpose(0, 1)
         output = output.reshape(original_size)
         output = output.transpose(0, self.dim)
@@ -362,6 +362,7 @@ def main():
         "max_grad_norm": 0.2,
         "hf_path": None,
         "base_output_dir": None,
+        "mixed_precision": "bf16",
     }
 
     string = "base" if not args["sparsemax"] else "sparsemax"
@@ -389,7 +390,7 @@ def main():
         accelerator_log_kwargs["project_dir"] = args.output_dir
 
     accelerator = Accelerator(gradient_accumulation_steps=args.gradient_accumulation_steps, 
-                                                            mixed_precision="fp16",
+                                                            mixed_precision=args.mixed_precision,
                                                             **accelerator_log_kwargs)
 
     # Make one log on every process with the configuration for debugging.
@@ -529,7 +530,7 @@ def main():
 
     model.gradient_checkpointing_enable()
 
-    if args.use_new_attn:
+    if args.sparsemax:
         patch_attn(model, sparsemax=args.sparsemax, alternate=args.alternate)
 
     print(model)
